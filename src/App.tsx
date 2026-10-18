@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { EditorEngine } from './core/editor';
 import { getFrameCount } from './core/project';
+import { loadMostRecent, saveProject } from './core/persistence';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { Toolbar } from './components/Toolbar';
 import { LayerPanel } from './components/LayerPanel';
 import { Timeline } from './components/Timeline';
 import { PlaybackBar } from './components/PlaybackBar';
 import { PropertiesPanel } from './components/PropertiesPanel';
+import { ProjectBar } from './components/ProjectBar';
 import { useProject } from './hooks/useProject';
 import { useToolStore } from './state/toolStore';
 import { useUiStore } from './state/uiStore';
@@ -16,6 +18,38 @@ export function App() {
   const project = useProject(engine);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadMostRecent()
+      .then((saved) => {
+        if (!cancelled && saved) engine.loadProject(saved);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [engine]);
+
+  useEffect(() => {
+    if (!ready) return;
+    let timer: number | undefined;
+    const schedule = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        void saveProject(engine.getProject()).catch(() => undefined);
+      }, 1000);
+    };
+    const unsubscribe = engine.subscribe(schedule);
+    return () => {
+      unsubscribe();
+      window.clearTimeout(timer);
+    };
+  }, [engine, ready]);
 
   useEffect(() => {
     const sync = () => {
@@ -76,6 +110,7 @@ export function App() {
   return (
     <div className="app">
       <Toolbar onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} />
+      <ProjectBar engine={engine} />
       <div className="main">
         <LayerPanel engine={engine} />
         <main className="workspace">

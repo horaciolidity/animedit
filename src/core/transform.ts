@@ -112,6 +112,29 @@ export function layerBounds(layer: Layer): Bounds | null {
         if (point.y > maxY) maxY = point.y;
       }
     }
+
+    for (const image of frame.images) {
+      const halfW = image.width / 2;
+      const halfH = image.height / 2;
+      const radians = (image.rotation * Math.PI) / 180;
+      const cos = Math.cos(radians);
+      const sin = Math.sin(radians);
+      const corners: [number, number][] = [
+        [-halfW, -halfH],
+        [halfW, -halfH],
+        [halfW, halfH],
+        [-halfW, halfH],
+      ];
+      for (const [dx, dy] of corners) {
+        found = true;
+        const px = image.x + dx * cos - dy * sin;
+        const py = image.y + dx * sin + dy * cos;
+        if (px < minX) minX = px;
+        if (py < minY) minY = py;
+        if (px > maxX) maxX = px;
+        if (py > maxY) maxY = py;
+      }
+    }
   }
 
   return found ? { minX, minY, maxX, maxY } : null;

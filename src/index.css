@@ -416,3 +416,23 @@ button {
 .drawing-canvas.move {
   cursor: move;
 }
+
+.project-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #26262c;
+  border-bottom: 1px solid #333;
+}
+
+.project-status {
+  font-size: 12px;
+  color: #7fe08a;
+  margin-left: 4px;
+}
+
+.tool.small {
+  font-size: 12px;
+  padding: 4px 10px;
+}

@@ -20,6 +20,17 @@ export interface Stroke {
 
 export interface Frame {
   strokes: Stroke[];
+  images: PlacedImage[];
+}
+
+export interface PlacedImage {
+  id: string;
+  src: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
 }
 
 export interface Transform {
@@ -49,6 +60,7 @@ export interface Layer {
 
 export interface Project {
   id: string;
+  name: string;
   width: number;
   height: number;
   fps: number;

@@ -47,6 +47,12 @@ export class History {
     };
   }
 
+  clear(): void {
+    this.undoStack.length = 0;
+    this.redoStack.length = 0;
+    this.emit();
+  }
+
   private emit(): void {
     for (const listener of this.listeners) listener();
   }

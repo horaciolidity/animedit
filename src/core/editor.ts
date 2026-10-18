@@ -1,5 +1,5 @@
 import { History } from './history';
-import type { EasingKind, Project, Stroke, Transform } from '../model/types';
+import type { EasingKind, PlacedImage, Project, Stroke, Transform } from '../model/types';
 import * as project from './project';
 
 export class EditorEngine {
@@ -44,6 +44,16 @@ export class EditorEngine {
 
   drawStroke(layerId: string, frameIndex: number, stroke: Stroke): void {
     this.commit('draw', project.addStroke(this.state, layerId, frameIndex, stroke));
+  }
+
+  addImage(layerId: string, frameIndex: number, image: PlacedImage): void {
+    this.commit('add-image', project.addImage(this.state, layerId, frameIndex, image));
+  }
+
+  loadProject(next: Project): void {
+    this.state = next;
+    this.pendingBefore = null;
+    this.history.clear();
   }
 
   setFps(fps: number): void {

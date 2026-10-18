@@ -1,4 +1,13 @@
-import type { EasingKind, Frame, Keyframe, Layer, Project, Stroke, Transform } from '../model/types';
+import type {
+  EasingKind,
+  Frame,
+  Keyframe,
+  Layer,
+  PlacedImage,
+  Project,
+  Stroke,
+  Transform,
+} from '../model/types';
 import { IDENTITY, transformAt } from './transform';
 
 export function createId(prefix: string): string {
@@ -6,7 +15,7 @@ export function createId(prefix: string): string {
 }
 
 export function createFrame(): Frame {
-  return { strokes: [] };
+  return { strokes: [], images: [] };
 }
 
 export function createLayer(name: string, frameCount: number): Layer {
@@ -29,6 +38,7 @@ export function getFrameCount(project: Project): number {
 export function createProject(width = 1280, height = 720, fps = 12): Project {
   return {
     id: createId('project'),
+    name: 'Animación',
     width,
     height,
     fps,
@@ -60,7 +70,21 @@ export function addStroke(
   return updateLayer(project, layerId, (layer) => ({
     ...layer,
     frames: layer.frames.map((frame, index) =>
-      index === frameIndex ? { strokes: [...frame.strokes, stroke] } : frame,
+      index === frameIndex ? { ...frame, strokes: [...frame.strokes, stroke] } : frame,
+    ),
+  }));
+}
+
+export function addImage(
+  project: Project,
+  layerId: string,
+  frameIndex: number,
+  image: PlacedImage,
+): Project {
+  return updateLayer(project, layerId, (layer) => ({
+    ...layer,
+    frames: layer.frames.map((frame, index) =>
+      index === frameIndex ? { ...frame, images: [...frame.images, image] } : frame,
     ),
   }));
 }
@@ -167,7 +191,7 @@ export function insertFrameAfter(project: Project, index: number, copyLayerId?: 
       const frames = [...layer.frames];
       const source = frames[index];
       const copy = layer.id === copyLayerId && source ? source.strokes.map((s) => ({ ...s })) : [];
-      frames.splice(index + 1, 0, { strokes: copy });
+      frames.splice(index + 1, 0, { strokes: copy, images: [] });
       return { ...layer, frames };
     }),
   };

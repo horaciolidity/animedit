@@ -1,5 +1,6 @@
 import type { Project, Stroke } from '../model/types';
 import { worldMatrix } from '../core/transform';
+import { getImage } from './imageCache';
 
 export interface OnionSkin {
   enabled: boolean;
@@ -68,10 +69,31 @@ function renderFrame(
   for (const layer of project.layers) {
     if (!layer.visible) continue;
     const frame = layer.frames[frameIndex];
-    if (!frame || frame.strokes.length === 0) continue;
+    const hasStrokes = !!frame && frame.strokes.length > 0;
+    const hasImages = !!frame && frame.images.length > 0;
+    if (!hasStrokes && !hasImages) continue;
 
     layerScratch.setTransform(1, 0, 0, 1, 0, 0);
     layerScratch.clearRect(0, 0, width, height);
+
+    if (frame.images.length > 0) {
+      for (const image of frame.images) {
+        const element = getImage(image.src);
+        if (!element) continue;
+        layerScratch.save();
+        layerScratch.translate(image.x, image.y);
+        if (image.rotation) layerScratch.rotate((image.rotation * Math.PI) / 180);
+        layerScratch.drawImage(
+          element,
+          -image.width / 2,
+          -image.height / 2,
+          image.width,
+          image.height,
+        );
+        layerScratch.restore();
+      }
+    }
+
     renderStrokes(layerScratch, frame.strokes);
 
     target.save();

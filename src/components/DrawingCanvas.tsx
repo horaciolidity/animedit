@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { EditorEngine } from '../core/editor';
 import { renderProject, renderStroke } from '../engine/renderer';
+import { subscribeImages } from '../engine/imageCache';
 import { layerBounds, parentWorldMatrix, transformAt, worldMatrix } from '../core/transform';
 import { useProject } from '../hooks/useProject';
 import { useToolStore } from '../state/toolStore';
@@ -39,6 +40,7 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
   const draftRef = useRef<Stroke | null>(null);
   const moveRef = useRef<MoveSession | null>(null);
   const dirtyRef = useRef(true);
+  const [imagesVersion, setImagesVersion] = useState(0);
 
   if (committedRef.current === null) {
     const make = () => {
@@ -51,6 +53,8 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
     layerScratchRef.current = make();
     onionScratchRef.current = make();
   }
+
+  useEffect(() => subscribeImages(() => setImagesVersion((v) => v + 1)), []);
 
   useEffect(() => {
     const committed = committedRef.current;
@@ -76,7 +80,7 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
       after: onionAfter,
     });
     dirtyRef.current = true;
-  }, [project, currentFrame, onionEnabled, onionBefore, onionAfter]);
+  }, [project, currentFrame, onionEnabled, onionBefore, onionAfter, imagesVersion]);
 
   useEffect(() => {
     let raf = 0;
