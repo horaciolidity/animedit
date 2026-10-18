@@ -1,4 +1,5 @@
 import type { Project, Stroke } from '../model/types';
+import { worldMatrix } from '../core/transform';
 
 export interface OnionSkin {
   enabled: boolean;
@@ -61,6 +62,7 @@ function renderFrame(
   frameIndex: number,
 ): void {
   const { width, height } = project;
+  target.setTransform(1, 0, 0, 1, 0, 0);
   target.clearRect(0, 0, width, height);
 
   for (const layer of project.layers) {
@@ -68,11 +70,13 @@ function renderFrame(
     const frame = layer.frames[frameIndex];
     if (!frame || frame.strokes.length === 0) continue;
 
+    layerScratch.setTransform(1, 0, 0, 1, 0, 0);
     layerScratch.clearRect(0, 0, width, height);
     renderStrokes(layerScratch, frame.strokes);
 
     target.save();
     target.globalAlpha = layer.opacity;
+    target.setTransform(worldMatrix(project, layer, frameIndex));
     target.drawImage(layerScratch.canvas, 0, 0);
     target.restore();
   }
@@ -92,12 +96,14 @@ function drawOnionFrame(
   renderFrame(onionScratch, layerScratch, project, frameIndex);
 
   onionScratch.save();
+  onionScratch.setTransform(1, 0, 0, 1, 0, 0);
   onionScratch.globalCompositeOperation = 'source-atop';
   onionScratch.fillStyle = tint;
   onionScratch.fillRect(0, 0, project.width, project.height);
   onionScratch.restore();
 
   target.save();
+  target.setTransform(1, 0, 0, 1, 0, 0);
   target.globalAlpha = Math.min(0.4, 0.4 / distance);
   target.drawImage(onionScratch.canvas, 0, 0);
   target.restore();
@@ -111,6 +117,7 @@ export function renderProject(
   frameIndex: number,
   onion: OnionSkin,
 ): void {
+  target.setTransform(1, 0, 0, 1, 0, 0);
   target.clearRect(0, 0, project.width, project.height);
 
   if (onion.enabled) {

@@ -4,11 +4,12 @@ import { getFrameCount } from '../core/project';
 import { useProject } from '../hooks/useProject';
 import { useUiStore } from '../state/uiStore';
 
-function cellClass(activeRow: boolean, current: boolean, hasStrokes: boolean): string {
+function cellClass(activeRow: boolean, current: boolean, hasStrokes: boolean, key: boolean): string {
   const classes = ['tl-cell'];
   if (activeRow) classes.push('active-row');
   if (current) classes.push('current');
   if (hasStrokes) classes.push('has-stroke');
+  if (key) classes.push('has-key');
   return classes.join(' ');
 }
 
@@ -72,7 +73,12 @@ export function Timeline({ engine }: { engine: EditorEngine }) {
             {layer.frames.map((frame, i) => (
               <div
                 key={`${layer.id}-${i}`}
-                className={cellClass(layer.id === activeLayerId, i === currentFrame, frame.strokes.length > 0)}
+                className={cellClass(
+                  layer.id === activeLayerId,
+                  i === currentFrame,
+                  frame.strokes.length > 0,
+                  layer.keyframes.some((key) => key.frame === i),
+                )}
                 onClick={() => {
                   setActiveLayer(layer.id);
                   setCurrentFrame(i);

@@ -1,11 +1,11 @@
 import { create } from 'zustand';
-import type { ToolKind } from '../model/types';
+import type { EditorTool } from '../model/types';
 
 interface ToolState {
-  tool: ToolKind;
+  tool: EditorTool;
   color: string;
   size: number;
-  setTool: (tool: ToolKind) => void;
+  setTool: (tool: EditorTool) => void;
   setColor: (color: string) => void;
   setSize: (size: number) => void;
 }

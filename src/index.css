@@ -320,6 +320,7 @@ button {
   border: 1px solid #303038;
   border-radius: 3px;
   cursor: pointer;
+  position: relative;
 }
 
 .tl-cell.active-row {
@@ -339,4 +340,79 @@ button {
 .tl-cell.current {
   outline: 1px solid #4a7dff;
   outline-offset: -1px;
+}
+
+.tl-cell.has-key::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 9px;
+  height: 9px;
+  background: #ffcf4d;
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+.tl-cell.has-key.has-stroke::after {
+  display: none;
+}
+
+.properties {
+  width: 250px;
+  flex: 0 0 250px;
+  display: flex;
+  flex-direction: column;
+  background: #222228;
+  border-left: 1px solid #333;
+  min-height: 0;
+}
+
+.properties-body {
+  overflow: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.prop-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid #2f2f36;
+  padding-bottom: 12px;
+}
+
+.prop-section:last-child {
+  border-bottom: none;
+}
+
+.prop-title {
+  font-size: 12px;
+  color: #9a9aa6;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.prop-field {
+  justify-content: space-between;
+}
+
+.prop-field input[type='number'] {
+  width: 96px;
+}
+
+.prop-field select {
+  max-width: 150px;
+}
+
+.prop-hint {
+  font-size: 11px;
+  color: #7c7c88;
+  line-height: 1.4;
+}
+
+.drawing-canvas.move {
+  cursor: move;
 }

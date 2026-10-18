@@ -6,6 +6,7 @@ import { Toolbar } from './components/Toolbar';
 import { LayerPanel } from './components/LayerPanel';
 import { Timeline } from './components/Timeline';
 import { PlaybackBar } from './components/PlaybackBar';
+import { PropertiesPanel } from './components/PropertiesPanel';
 import { useProject } from './hooks/useProject';
 import { useToolStore } from './state/toolStore';
 import { useUiStore } from './state/uiStore';
@@ -59,6 +60,8 @@ export function App() {
         useToolStore.getState().setTool('brush');
       } else if (key === 'e') {
         useToolStore.getState().setTool('eraser');
+      } else if (key === 'v') {
+        useToolStore.getState().setTool('move');
       } else if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
         const max = getFrameCount(engine.getProject()) - 1;
         const delta = event.key === 'ArrowRight' ? 1 : -1;
@@ -78,6 +81,7 @@ export function App() {
         <main className="workspace">
           <DrawingCanvas engine={engine} />
         </main>
+        <PropertiesPanel engine={engine} />
       </div>
       <PlaybackBar engine={engine} />
       <Timeline engine={engine} />

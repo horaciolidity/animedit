@@ -1,13 +1,20 @@
 import { useEffect, useRef } from 'react';
 import type { EditorEngine } from '../core/editor';
 import { renderProject, renderStroke } from '../engine/renderer';
+import { layerBounds, parentWorldMatrix, transformAt, worldMatrix } from '../core/transform';
 import { useProject } from '../hooks/useProject';
 import { useToolStore } from '../state/toolStore';
 import { useUiStore } from '../state/uiStore';
-import type { Stroke, StrokePoint } from '../model/types';
+import type { Stroke, StrokePoint, ToolKind, Transform } from '../model/types';
 
 interface DrawingCanvasProps {
   engine: EditorEngine;
+}
+
+interface MoveSession {
+  start: StrokePoint;
+  transform: Transform;
+  parentWorld: DOMMatrix;
 }
 
 function toPoint(canvas: HTMLCanvasElement, event: PointerEvent): StrokePoint {
@@ -23,12 +30,14 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
   const onionEnabled = useUiStore((s) => s.onionEnabled);
   const onionBefore = useUiStore((s) => s.onionBefore);
   const onionAfter = useUiStore((s) => s.onionAfter);
+  const tool = useToolStore((s) => s.tool);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const committedRef = useRef<HTMLCanvasElement | null>(null);
   const layerScratchRef = useRef<HTMLCanvasElement | null>(null);
   const onionScratchRef = useRef<HTMLCanvasElement | null>(null);
   const draftRef = useRef<Stroke | null>(null);
+  const moveRef = useRef<MoveSession | null>(null);
   const dirtyRef = useRef(true);
 
   if (committedRef.current === null) {
@@ -77,6 +86,7 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
         const committed = committedRef.current;
         const ctx = canvas?.getContext('2d');
         if (ctx && committed) {
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
           ctx.clearRect(0, 0, committed.width, committed.height);
           ctx.drawImage(committed, 0, 0);
           if (draftRef.current) renderStroke(ctx, draftRef.current);
@@ -93,15 +103,14 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const onDown = (event: PointerEvent) => {
+    const startDraw = (event: PointerEvent, kind: ToolKind) => {
       const { activeLayerId, currentFrame: frame } = useUiStore.getState();
       if (!activeLayerId || frame >= engine.getProject().layers[0].frames.length) return;
-      event.preventDefault();
       canvas.setPointerCapture(event.pointerId);
-      const { tool, color, size } = useToolStore.getState();
+      const { color, size } = useToolStore.getState();
       draftRef.current = {
         id: crypto.randomUUID(),
-        tool,
+        tool: kind,
         color,
         size,
         points: [toPoint(canvas, event)],
@@ -109,7 +118,62 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
       dirtyRef.current = true;
     };
 
+    const startMove = (event: PointerEvent) => {
+      const { activeLayerId, currentFrame: frame } = useUiStore.getState();
+      const current = engine.getProject();
+      const layer = current.layers.find((candidate) => candidate.id === activeLayerId);
+      if (!layer) return;
+
+      const point = toPoint(canvas, event);
+      const local = worldMatrix(current, layer, frame)
+        .inverse()
+        .transformPoint({ x: point.x, y: point.y });
+      const bounds = layerBounds(layer);
+      if (!bounds) return;
+      const margin = 14;
+      if (
+        local.x < bounds.minX - margin ||
+        local.x > bounds.maxX + margin ||
+        local.y < bounds.minY - margin ||
+        local.y > bounds.maxY + margin
+      ) {
+        return;
+      }
+
+      canvas.setPointerCapture(event.pointerId);
+      moveRef.current = {
+        start: point,
+        transform: transformAt(layer, frame),
+        parentWorld: parentWorldMatrix(current, layer, frame),
+      };
+      engine.beginTransform();
+    };
+
+    const onDown = (event: PointerEvent) => {
+      event.preventDefault();
+      const activeTool = useToolStore.getState().tool;
+      if (activeTool === 'move') startMove(event);
+      else startDraw(event, activeTool);
+    };
+
     const onMove = (event: PointerEvent) => {
+      const move = moveRef.current;
+      if (move) {
+        event.preventDefault();
+        const { activeLayerId, currentFrame: frame } = useUiStore.getState();
+        if (!activeLayerId) return;
+        const point = toPoint(canvas, event);
+        const inverse = move.parentWorld.inverse();
+        const p0 = inverse.transformPoint({ x: move.start.x, y: move.start.y });
+        const p1 = inverse.transformPoint({ x: point.x, y: point.y });
+        engine.updateLiveTransform(activeLayerId, frame, {
+          ...move.transform,
+          x: move.transform.x + (p1.x - p0.x),
+          y: move.transform.y + (p1.y - p0.y),
+        });
+        return;
+      }
+
       const draft = draftRef.current;
       if (!draft) return;
       event.preventDefault();
@@ -118,7 +182,12 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
       dirtyRef.current = true;
     };
 
-    const finish = (commit: boolean) => {
+    const endMove = () => {
+      moveRef.current = null;
+      engine.endTransform();
+    };
+
+    const finishDraw = (commit: boolean) => {
       const draft = draftRef.current;
       if (!draft) return;
       draftRef.current = null;
@@ -128,8 +197,14 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
       if (activeLayerId) engine.drawStroke(activeLayerId, frame, draft);
     };
 
-    const onUp = () => finish(true);
-    const onCancel = () => finish(false);
+    const onUp = () => {
+      if (moveRef.current) endMove();
+      else finishDraw(true);
+    };
+    const onCancel = () => {
+      if (moveRef.current) endMove();
+      else finishDraw(false);
+    };
 
     canvas.addEventListener('pointerdown', onDown);
     canvas.addEventListener('pointermove', onMove);
@@ -147,7 +222,7 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
     <div className="canvas-wrap">
       <canvas
         ref={canvasRef}
-        className="drawing-canvas"
+        className={tool === 'move' ? 'drawing-canvas move' : 'drawing-canvas'}
         width={project.width}
         height={project.height}
       />

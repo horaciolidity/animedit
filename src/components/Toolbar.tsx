@@ -1,5 +1,5 @@
 import { useToolStore } from '../state/toolStore';
-import type { ToolKind } from '../model/types';
+import type { EditorTool } from '../model/types';
 
 interface ToolbarProps {
   onUndo: () => void;
@@ -8,9 +8,10 @@ interface ToolbarProps {
   canRedo: boolean;
 }
 
-const TOOLS: { kind: ToolKind; label: string; hint: string }[] = [
+const TOOLS: { kind: EditorTool; label: string; hint: string }[] = [
   { kind: 'brush', label: 'Pincel', hint: 'B' },
   { kind: 'eraser', label: 'Borrador', hint: 'E' },
+  { kind: 'move', label: 'Mover', hint: 'V' },
 ];
 
 export function Toolbar({ onUndo, onRedo, canUndo, canRedo }: ToolbarProps) {
@@ -24,14 +25,14 @@ export function Toolbar({ onUndo, onRedo, canUndo, canRedo }: ToolbarProps) {
   return (
     <header className="toolbar">
       <div className="group">
-        {TOOLS.map((t) => (
+        {TOOLS.map((item) => (
           <button
-            key={t.kind}
-            className={tool === t.kind ? 'tool active' : 'tool'}
-            onClick={() => setTool(t.kind)}
-            title={`${t.label} (${t.hint})`}
+            key={item.kind}
+            className={tool === item.kind ? 'tool active' : 'tool'}
+            onClick={() => setTool(item.kind)}
+            title={`${item.label} (${item.hint})`}
           >
-            {t.label}
+            {item.label}
           </button>
         ))}
       </div>

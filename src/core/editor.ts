@@ -1,17 +1,31 @@
 import { History } from './history';
-import type { Project, Stroke } from '../model/types';
+import type { EasingKind, Project, Stroke, Transform } from '../model/types';
 import * as project from './project';
 
 export class EditorEngine {
   readonly history = new History();
   private state: Project;
+  private listeners = new Set<() => void>();
+  private pendingBefore: Project | null = null;
 
   constructor(initial: Project = project.createProject()) {
     this.state = initial;
+    this.history.subscribe(() => this.notify());
   }
 
   getProject(): Project {
     return this.state;
+  }
+
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notify(): void {
+    for (const listener of this.listeners) listener();
   }
 
   private commit(label: string, next: Project): void {
@@ -72,6 +86,51 @@ export class EditorEngine {
     );
   }
 
+  setParent(layerId: string, parentId: string | null): void {
+    this.commit('parent', project.setParent(this.state, layerId, parentId));
+  }
+
+  setTransformValue(layerId: string, frame: number, transform: Transform): void {
+    this.commit('transform', project.setTransformAtFrame(this.state, layerId, frame, transform));
+  }
+
+  beginTransform(): void {
+    this.pendingBefore = this.state;
+  }
+
+  updateLiveTransform(layerId: string, frame: number, transform: Transform): void {
+    this.state = project.setTransformAtFrame(this.state, layerId, frame, transform);
+    this.notify();
+  }
+
+  endTransform(): void {
+    const before = this.pendingBefore;
+    this.pendingBefore = null;
+    if (!before || before === this.state) return;
+    const after = this.state;
+    this.history.execute({
+      label: 'transform-drag',
+      do: () => {
+        this.state = after;
+      },
+      undo: () => {
+        this.state = before;
+      },
+    });
+  }
+
+  addKeyframe(layerId: string, frame: number): void {
+    this.commit('add-keyframe', project.addKeyframeAt(this.state, layerId, frame));
+  }
+
+  removeKeyframe(layerId: string, frame: number): void {
+    this.commit('remove-keyframe', project.removeKeyframeAt(this.state, layerId, frame));
+  }
+
+  setKeyframeEasing(layerId: string, frame: number, easing: EasingKind): void {
+    this.commit('easing', project.setKeyframeEasing(this.state, layerId, frame, easing));
+  }
+
   appendFrame(): void {
     this.commit('append-frame', project.appendFrame(this.state));
   }
@@ -90,9 +149,5 @@ export class EditorEngine {
 
   redo(): void {
     this.history.redo();
-  }
-
-  subscribe(listener: () => void): () => void {
-    return this.history.subscribe(listener);
   }
 }

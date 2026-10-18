@@ -1,4 +1,5 @@
-import type { Frame, Layer, Project, Stroke } from '../model/types';
+import type { EasingKind, Frame, Keyframe, Layer, Project, Stroke, Transform } from '../model/types';
+import { IDENTITY, transformAt } from './transform';
 
 export function createId(prefix: string): string {
   return `${prefix}_${crypto.randomUUID()}`;
@@ -14,6 +15,9 @@ export function createLayer(name: string, frameCount: number): Layer {
     name,
     visible: true,
     opacity: 1,
+    parentId: null,
+    transform: { ...IDENTITY },
+    keyframes: [],
     frames: Array.from({ length: frameCount }, createFrame),
   };
 }
@@ -68,7 +72,10 @@ export function addLayer(project: Project): Project {
 
 export function removeLayer(project: Project, layerId: string): Project {
   if (project.layers.length <= 1) return project;
-  return { ...project, layers: project.layers.filter((layer) => layer.id !== layerId) };
+  const layers = project.layers
+    .filter((layer) => layer.id !== layerId)
+    .map((layer) => (layer.parentId === layerId ? { ...layer, parentId: null } : layer));
+  return { ...project, layers };
 }
 
 export function moveLayer(project: Project, layerId: string, direction: -1 | 1): Project {
@@ -80,6 +87,70 @@ export function moveLayer(project: Project, layerId: string, direction: -1 | 1):
   layers[index] = layers[target];
   layers[target] = current;
   return { ...project, layers };
+}
+
+export function setParent(project: Project, layerId: string, parentId: string | null): Project {
+  if (layerId === parentId) return project;
+  if (parentId && isDescendant(project, parentId, layerId)) return project;
+  return updateLayer(project, layerId, (layer) => ({ ...layer, parentId }));
+}
+
+function isDescendant(project: Project, candidateId: string, ancestorId: string): boolean {
+  const seen = new Set<string>();
+  let current = project.layers.find((layer) => layer.id === candidateId);
+  while (current?.parentId && !seen.has(current.id)) {
+    if (current.parentId === ancestorId) return true;
+    seen.add(current.id);
+    current = project.layers.find((layer) => layer.id === current?.parentId);
+  }
+  return false;
+}
+
+function sortKeyframes(keyframes: Keyframe[]): Keyframe[] {
+  return [...keyframes].sort((a, b) => a.frame - b.frame);
+}
+
+export function setTransformAtFrame(
+  project: Project,
+  layerId: string,
+  frame: number,
+  transform: Transform,
+): Project {
+  return updateLayer(project, layerId, (layer) => {
+    if (layer.keyframes.length === 0) return { ...layer, transform };
+    const exists = layer.keyframes.some((key) => key.frame === frame);
+    const keyframes = exists
+      ? layer.keyframes.map((key) => (key.frame === frame ? { ...key, transform } : key))
+      : sortKeyframes([...layer.keyframes, { frame, transform, easing: 'linear' }]);
+    return { ...layer, keyframes };
+  });
+}
+
+export function addKeyframeAt(project: Project, layerId: string, frame: number): Project {
+  return updateLayer(project, layerId, (layer) => {
+    if (layer.keyframes.some((key) => key.frame === frame)) return layer;
+    const transform = transformAt(layer, frame);
+    return { ...layer, keyframes: sortKeyframes([...layer.keyframes, { frame, transform, easing: 'linear' }]) };
+  });
+}
+
+export function removeKeyframeAt(project: Project, layerId: string, frame: number): Project {
+  return updateLayer(project, layerId, (layer) => ({
+    ...layer,
+    keyframes: layer.keyframes.filter((key) => key.frame !== frame),
+  }));
+}
+
+export function setKeyframeEasing(
+  project: Project,
+  layerId: string,
+  frame: number,
+  easing: EasingKind,
+): Project {
+  return updateLayer(project, layerId, (layer) => ({
+    ...layer,
+    keyframes: layer.keyframes.map((key) => (key.frame === frame ? { ...key, easing } : key)),
+  }));
 }
 
 export function appendFrame(project: Project): Project {
