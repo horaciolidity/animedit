@@ -1,4 +1,4 @@
-import type { Stroke } from '../model/types';
+import type { Project, Stroke } from '../model/types';
 
 function strokeWidth(stroke: Stroke, pressure: number): number {
   const p = pressure > 0 ? Math.min(pressure, 1) : 1;
@@ -46,4 +46,28 @@ export function renderStroke(ctx: CanvasRenderingContext2D, stroke: Stroke): voi
 
 export function renderStrokes(ctx: CanvasRenderingContext2D, strokes: readonly Stroke[]): void {
   for (const stroke of strokes) renderStroke(ctx, stroke);
+}
+
+export function renderProject(
+  ctx: CanvasRenderingContext2D,
+  scratch: CanvasRenderingContext2D,
+  project: Project,
+  frameIndex: number,
+): void {
+  const { width, height } = project;
+  ctx.clearRect(0, 0, width, height);
+
+  for (const layer of project.layers) {
+    if (!layer.visible) continue;
+    const frame = layer.frames[frameIndex];
+    if (!frame || frame.strokes.length === 0) continue;
+
+    scratch.clearRect(0, 0, width, height);
+    renderStrokes(scratch, frame.strokes);
+
+    ctx.save();
+    ctx.globalAlpha = layer.opacity;
+    ctx.drawImage(scratch.canvas, 0, 0);
+    ctx.restore();
+  }
 }

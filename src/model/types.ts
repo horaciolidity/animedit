@@ -14,7 +14,22 @@ export interface Stroke {
   points: StrokePoint[];
 }
 
-export interface DocumentSize {
+export interface Frame {
+  strokes: Stroke[];
+}
+
+export interface Layer {
+  id: string;
+  name: string;
+  visible: boolean;
+  opacity: number;
+  frames: Frame[];
+}
+
+export interface Project {
+  id: string;
   width: number;
   height: number;
+  fps: number;
+  layers: Layer[];
 }
