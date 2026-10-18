@@ -88,10 +88,18 @@ export function addImage(
     ),
   }));
 }
-
 export function addLayer(project: Project): Project {
   const layer = createLayer(`Capa ${project.layers.length + 1}`, getFrameCount(project));
   return { ...project, layers: [...project.layers, layer] };
+}
+
+export function clearFrame(project: Project, layerId: string, frameIndex: number): Project {
+  return updateLayer(project, layerId, (layer) => ({
+    ...layer,
+    frames: layer.frames.map((frame, index) =>
+      index === frameIndex ? { strokes: [], images: [] } : frame,
+    ),
+  }));
 }
 
 export function removeLayer(project: Project, layerId: string): Project {

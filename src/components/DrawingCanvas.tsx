@@ -3,6 +3,7 @@ import type { EditorEngine } from '../core/editor';
 import { renderProject, renderStroke } from '../engine/renderer';
 import { subscribeImages } from '../engine/imageCache';
 import { layerBounds, parentWorldMatrix, transformAt, worldMatrix } from '../core/transform';
+import { buildShape, isShapeKind, type ShapeKind } from '../core/shapes';
 import { useProject } from '../hooks/useProject';
 import { useToolStore } from '../state/toolStore';
 import { useUiStore } from '../state/uiStore';
@@ -18,6 +19,18 @@ interface MoveSession {
   parentWorld: DOMMatrix;
 }
 
+interface ShapeSession {
+  kind: ShapeKind;
+  start: StrokePoint;
+}
+
+interface PanSession {
+  startX: number;
+  startY: number;
+  panX: number;
+  panY: number;
+}
+
 function toPoint(canvas: HTMLCanvasElement, event: PointerEvent): StrokePoint {
   const rect = canvas.getBoundingClientRect();
   const x = ((event.clientX - rect.left) / rect.width) * canvas.width;
@@ -31,14 +44,20 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
   const onionEnabled = useUiStore((s) => s.onionEnabled);
   const onionBefore = useUiStore((s) => s.onionBefore);
   const onionAfter = useUiStore((s) => s.onionAfter);
+  const zoom = useUiStore((s) => s.zoom);
+  const panX = useUiStore((s) => s.panX);
+  const panY = useUiStore((s) => s.panY);
   const tool = useToolStore((s) => s.tool);
 
+  const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const committedRef = useRef<HTMLCanvasElement | null>(null);
   const layerScratchRef = useRef<HTMLCanvasElement | null>(null);
   const onionScratchRef = useRef<HTMLCanvasElement | null>(null);
   const draftRef = useRef<Stroke | null>(null);
   const moveRef = useRef<MoveSession | null>(null);
+  const shapeRef = useRef<ShapeSession | null>(null);
+  const panRef = useRef<PanSession | null>(null);
   const dirtyRef = useRef(true);
   const [imagesVersion, setImagesVersion] = useState(0);
 
@@ -104,13 +123,36 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
   }, []);
 
   useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const rect = wrap.getBoundingClientRect();
+      const state = useUiStore.getState();
+      if (event.ctrlKey || event.metaKey) {
+        const factor = Math.exp(-event.deltaY * 0.0015);
+        state.zoomAt(
+          factor,
+          event.clientX - rect.left,
+          event.clientY - rect.top,
+          rect.width,
+          rect.height,
+        );
+      } else {
+        state.setPan(state.panX - event.deltaX, state.panY - event.deltaY);
+      }
+    };
+    wrap.addEventListener('wheel', onWheel, { passive: false });
+    return () => wrap.removeEventListener('wheel', onWheel);
+  }, []);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const startDraw = (event: PointerEvent, kind: ToolKind) => {
       const { activeLayerId, currentFrame: frame } = useUiStore.getState();
       if (!activeLayerId || frame >= engine.getProject().layers[0].frames.length) return;
-      canvas.setPointerCapture(event.pointerId);
       const { color, size } = useToolStore.getState();
       draftRef.current = {
         id: crypto.randomUUID(),
@@ -118,6 +160,22 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
         color,
         size,
         points: [toPoint(canvas, event)],
+      };
+      dirtyRef.current = true;
+    };
+
+    const startShape = (event: PointerEvent, kind: ShapeKind) => {
+      const { activeLayerId, currentFrame: frame } = useUiStore.getState();
+      if (!activeLayerId || frame >= engine.getProject().layers[0].frames.length) return;
+      const { color, size } = useToolStore.getState();
+      const start = toPoint(canvas, event);
+      shapeRef.current = { kind, start };
+      draftRef.current = {
+        id: crypto.randomUUID(),
+        tool: kind,
+        color,
+        size,
+        points: buildShape(kind, start, start, event.shiftKey),
       };
       dirtyRef.current = true;
     };
@@ -144,7 +202,6 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
         return;
       }
 
-      canvas.setPointerCapture(event.pointerId);
       moveRef.current = {
         start: point,
         transform: transformAt(layer, frame),
@@ -155,12 +212,34 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
 
     const onDown = (event: PointerEvent) => {
       event.preventDefault();
+      if (event.button === 1) {
+        const state = useUiStore.getState();
+        panRef.current = {
+          startX: event.clientX,
+          startY: event.clientY,
+          panX: state.panX,
+          panY: state.panY,
+        };
+        canvas.setPointerCapture(event.pointerId);
+        return;
+      }
+      canvas.setPointerCapture(event.pointerId);
       const activeTool = useToolStore.getState().tool;
       if (activeTool === 'move') startMove(event);
+      else if (isShapeKind(activeTool)) startShape(event, activeTool);
       else startDraw(event, activeTool);
     };
 
     const onMove = (event: PointerEvent) => {
+      const pan = panRef.current;
+      if (pan) {
+        event.preventDefault();
+        useUiStore
+          .getState()
+          .setPan(pan.panX + (event.clientX - pan.startX), pan.panY + (event.clientY - pan.startY));
+        return;
+      }
+
       const move = moveRef.current;
       if (move) {
         event.preventDefault();
@@ -178,6 +257,18 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
         return;
       }
 
+      const shape = shapeRef.current;
+      if (shape && draftRef.current) {
+        event.preventDefault();
+        const current = toPoint(canvas, event);
+        draftRef.current = {
+          ...draftRef.current,
+          points: buildShape(shape.kind, shape.start, current, event.shiftKey),
+        };
+        dirtyRef.current = true;
+        return;
+      }
+
       const draft = draftRef.current;
       if (!draft) return;
       event.preventDefault();
@@ -186,28 +277,39 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
       dirtyRef.current = true;
     };
 
-    const endMove = () => {
-      moveRef.current = null;
-      engine.endTransform();
-    };
-
     const finishDraw = (commit: boolean) => {
       const draft = draftRef.current;
       if (!draft) return;
       draftRef.current = null;
       dirtyRef.current = true;
-      if (!commit || draft.points.length === 0) return;
+      if (!commit || draft.points.length < 2) return;
       const { activeLayerId, currentFrame: frame } = useUiStore.getState();
       if (activeLayerId) engine.drawStroke(activeLayerId, frame, draft);
     };
 
     const onUp = () => {
-      if (moveRef.current) endMove();
-      else finishDraw(true);
+      if (panRef.current) {
+        panRef.current = null;
+      } else if (moveRef.current) {
+        moveRef.current = null;
+        engine.endTransform();
+      } else if (shapeRef.current) {
+        shapeRef.current = null;
+        finishDraw(true);
+      } else {
+        finishDraw(true);
+      }
     };
+
     const onCancel = () => {
-      if (moveRef.current) endMove();
-      else finishDraw(false);
+      panRef.current = null;
+      if (moveRef.current) {
+        moveRef.current = null;
+        engine.endTransform();
+      } else {
+        shapeRef.current = null;
+        finishDraw(false);
+      }
     };
 
     canvas.addEventListener('pointerdown', onDown);
@@ -222,11 +324,17 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
     };
   }, [engine]);
 
+  const cursor = tool === 'move' ? 'move' : 'crosshair';
+
   return (
-    <div className="canvas-wrap">
+    <div className="canvas-wrap" ref={wrapRef}>
       <canvas
         ref={canvasRef}
-        className={tool === 'move' ? 'drawing-canvas move' : 'drawing-canvas'}
+        className="drawing-canvas"
+        style={{
+          transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
+          cursor,
+        }}
         width={project.width}
         height={project.height}
       />

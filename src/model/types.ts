@@ -1,4 +1,4 @@
-export type ToolKind = 'brush' | 'eraser';
+export type ToolKind = 'brush' | 'eraser' | 'line' | 'rect' | 'ellipse';
 
 export type EditorTool = ToolKind | 'move';
 

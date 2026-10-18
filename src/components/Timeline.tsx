@@ -42,6 +42,12 @@ export function Timeline({ engine }: { engine: EditorEngine }) {
         >
           Borrar fotograma
         </button>
+        <button
+          className="tool small"
+          onClick={() => activeLayerId && engine.clearFrame(activeLayerId, currentFrame)}
+        >
+          Limpiar
+        </button>
         <span className="timeline-status">
           Fotograma {currentFrame + 1} / {frameCount} · {project.fps} fps
         </span>

@@ -94,8 +94,28 @@ export function App() {
         useToolStore.getState().setTool('brush');
       } else if (key === 'e') {
         useToolStore.getState().setTool('eraser');
+      } else if (key === 'l') {
+        useToolStore.getState().setTool('line');
+      } else if (key === 'r') {
+        useToolStore.getState().setTool('rect');
+      } else if (key === 'o') {
+        useToolStore.getState().setTool('ellipse');
       } else if (key === 'v') {
         useToolStore.getState().setTool('move');
+      } else if (event.code === 'Space') {
+        event.preventDefault();
+        const ui = useUiStore.getState();
+        ui.setPlaying(!ui.isPlaying);
+      } else if (key === '+' || key === '=') {
+        useUiStore.getState().zoomAt(1.25, 0, 0, 0, 0);
+      } else if (key === '-') {
+        useUiStore.getState().zoomAt(1 / 1.25, 0, 0, 0, 0);
+      } else if (key === '0') {
+        useUiStore.getState().resetView();
+      } else if (event.key === 'Home') {
+        useUiStore.getState().setCurrentFrame(0);
+      } else if (event.key === 'End') {
+        useUiStore.getState().setCurrentFrame(getFrameCount(engine.getProject()) - 1);
       } else if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
         const max = getFrameCount(engine.getProject()) - 1;
         const delta = event.key === 'ArrowRight' ? 1 : -1;

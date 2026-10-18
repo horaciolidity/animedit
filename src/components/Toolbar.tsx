@@ -1,4 +1,5 @@
 import { useToolStore } from '../state/toolStore';
+import { useUiStore } from '../state/uiStore';
 import type { EditorTool } from '../model/types';
 
 interface ToolbarProps {
@@ -11,8 +12,13 @@ interface ToolbarProps {
 const TOOLS: { kind: EditorTool; label: string; hint: string }[] = [
   { kind: 'brush', label: 'Pincel', hint: 'B' },
   { kind: 'eraser', label: 'Borrador', hint: 'E' },
+  { kind: 'line', label: 'Línea', hint: 'L' },
+  { kind: 'rect', label: 'Rect', hint: 'R' },
+  { kind: 'ellipse', label: 'Elipse', hint: 'O' },
   { kind: 'move', label: 'Mover', hint: 'V' },
 ];
+
+const SHAPE_TOOLS: EditorTool[] = ['brush', 'eraser', 'line', 'rect', 'ellipse'];
 
 export function Toolbar({ onUndo, onRedo, canUndo, canRedo }: ToolbarProps) {
   const tool = useToolStore((s) => s.tool);
@@ -21,6 +27,11 @@ export function Toolbar({ onUndo, onRedo, canUndo, canRedo }: ToolbarProps) {
   const setTool = useToolStore((s) => s.setTool);
   const setColor = useToolStore((s) => s.setColor);
   const setSize = useToolStore((s) => s.setSize);
+  const zoom = useUiStore((s) => s.zoom);
+  const resetView = useUiStore((s) => s.resetView);
+  const zoomAt = useUiStore((s) => s.zoomAt);
+
+  const showStyling = SHAPE_TOOLS.includes(tool);
 
   return (
     <header className="toolbar">
@@ -37,25 +48,41 @@ export function Toolbar({ onUndo, onRedo, canUndo, canRedo }: ToolbarProps) {
         ))}
       </div>
 
-      <div className="group">
-        <label className="field">
-          Color
-          <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
-        </label>
-      </div>
+      {showStyling ? (
+        <>
+          <div className="group">
+            <label className="field">
+              Color
+              <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
+            </label>
+          </div>
+
+          <div className="group">
+            <label className="field">
+              Tamaño
+              <input
+                type="range"
+                min={1}
+                max={80}
+                value={size}
+                onChange={(e) => setSize(Number(e.target.value))}
+              />
+              <span className="size-value">{size}</span>
+            </label>
+          </div>
+        </>
+      ) : null}
 
       <div className="group">
-        <label className="field">
-          Tamaño
-          <input
-            type="range"
-            min={1}
-            max={80}
-            value={size}
-            onChange={(e) => setSize(Number(e.target.value))}
-          />
-          <span className="size-value">{size}</span>
-        </label>
+        <button className="tool" onClick={() => zoomAt(1 / 1.25, 0, 0, 0, 0)} title="Alejar (-)">
+          −
+        </button>
+        <button className="tool" onClick={resetView} title="Restablecer vista (0)">
+          {Math.round(zoom * 100)}%
+        </button>
+        <button className="tool" onClick={() => zoomAt(1.25, 0, 0, 0, 0)} title="Acercar (+)">
+          +
+        </button>
       </div>
 
       <div className="group">

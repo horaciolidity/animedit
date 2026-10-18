@@ -50,6 +50,10 @@ export class EditorEngine {
     this.commit('add-image', project.addImage(this.state, layerId, frameIndex, image));
   }
 
+  clearFrame(layerId: string, frameIndex: number): void {
+    this.commit('clear-frame', project.clearFrame(this.state, layerId, frameIndex));
+  }
+
   loadProject(next: Project): void {
     this.state = next;
     this.pendingBefore = null;
