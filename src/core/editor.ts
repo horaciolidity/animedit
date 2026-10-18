@@ -32,6 +32,10 @@ export class EditorEngine {
     this.commit('draw', project.addStroke(this.state, layerId, frameIndex, stroke));
   }
 
+  setFps(fps: number): void {
+    this.commit('fps', project.setFps(this.state, fps));
+  }
+
   addLayer(): void {
     this.commit('add-layer', project.addLayer(this.state));
   }

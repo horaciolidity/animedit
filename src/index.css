@@ -25,7 +25,7 @@ button {
 
 .app {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr auto auto;
   height: 100%;
 }
 
@@ -101,6 +101,34 @@ button {
   width: 22px;
   text-align: right;
   color: #e6e6e6;
+}
+
+.field select,
+.field input[type='number'] {
+  background: #1e1e24;
+  color: #e6e6e6;
+  border: 1px solid #3a3a44;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 13px;
+}
+
+.field input[type='number'] {
+  width: 52px;
+}
+
+.playback-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 14px;
+  background: #24242a;
+  border-top: 1px solid #333;
+}
+
+.export-group {
+  margin-left: auto;
 }
 
 .main {

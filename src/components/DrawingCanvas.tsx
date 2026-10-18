@@ -20,43 +20,54 @@ function toPoint(canvas: HTMLCanvasElement, event: PointerEvent): StrokePoint {
 export function DrawingCanvas({ engine }: DrawingCanvasProps) {
   const project = useProject(engine);
   const currentFrame = useUiStore((s) => s.currentFrame);
+  const onionEnabled = useUiStore((s) => s.onionEnabled);
+  const onionBefore = useUiStore((s) => s.onionBefore);
+  const onionAfter = useUiStore((s) => s.onionAfter);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const committedRef = useRef<HTMLCanvasElement | null>(null);
-  const scratchRef = useRef<HTMLCanvasElement | null>(null);
+  const layerScratchRef = useRef<HTMLCanvasElement | null>(null);
+  const onionScratchRef = useRef<HTMLCanvasElement | null>(null);
   const draftRef = useRef<Stroke | null>(null);
   const dirtyRef = useRef(true);
 
   if (committedRef.current === null) {
-    const committed = document.createElement('canvas');
-    committed.width = project.width;
-    committed.height = project.height;
-    committedRef.current = committed;
-
-    const scratch = document.createElement('canvas');
-    scratch.width = project.width;
-    scratch.height = project.height;
-    scratchRef.current = scratch;
+    const make = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = project.width;
+      canvas.height = project.height;
+      return canvas;
+    };
+    committedRef.current = make();
+    layerScratchRef.current = make();
+    onionScratchRef.current = make();
   }
 
   useEffect(() => {
     const committed = committedRef.current;
-    const scratch = scratchRef.current;
-    if (!committed || !scratch) return;
+    const layerScratch = layerScratchRef.current;
+    const onionScratch = onionScratchRef.current;
+    if (!committed || !layerScratch || !onionScratch) return;
+
     const ctx = committed.getContext('2d');
-    const scratchCtx = scratch.getContext('2d');
-    if (!ctx || !scratchCtx) return;
+    const layerCtx = layerScratch.getContext('2d');
+    const onionCtx = onionScratch.getContext('2d');
+    if (!ctx || !layerCtx || !onionCtx) return;
 
     if (committed.width !== project.width || committed.height !== project.height) {
-      committed.width = project.width;
-      committed.height = project.height;
-      scratch.width = project.width;
-      scratch.height = project.height;
+      for (const canvas of [committed, layerScratch, onionScratch]) {
+        canvas.width = project.width;
+        canvas.height = project.height;
+      }
     }
 
-    renderProject(ctx, scratchCtx, project, currentFrame);
+    renderProject(ctx, layerCtx, onionCtx, project, currentFrame, {
+      enabled: onionEnabled,
+      before: onionBefore,
+      after: onionAfter,
+    });
     dirtyRef.current = true;
-  }, [project, currentFrame]);
+  }, [project, currentFrame, onionEnabled, onionBefore, onionAfter]);
 
   useEffect(() => {
     let raf = 0;
@@ -84,7 +95,7 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
 
     const onDown = (event: PointerEvent) => {
       const { activeLayerId, currentFrame: frame } = useUiStore.getState();
-      if (!activeLayerId || frame >= project.layers[0].frames.length) return;
+      if (!activeLayerId || frame >= engine.getProject().layers[0].frames.length) return;
       event.preventDefault();
       canvas.setPointerCapture(event.pointerId);
       const { tool, color, size } = useToolStore.getState();
@@ -130,7 +141,7 @@ export function DrawingCanvas({ engine }: DrawingCanvasProps) {
       canvas.removeEventListener('pointerup', onUp);
       canvas.removeEventListener('pointercancel', onCancel);
     };
-  }, [engine, project]);
+  }, [engine]);
 
   return (
     <div className="canvas-wrap">

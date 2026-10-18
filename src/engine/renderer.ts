@@ -1,5 +1,11 @@
 import type { Project, Stroke } from '../model/types';
 
+export interface OnionSkin {
+  enabled: boolean;
+  before: number;
+  after: number;
+}
+
 function strokeWidth(stroke: Stroke, pressure: number): number {
   const p = pressure > 0 ? Math.min(pressure, 1) : 1;
   return Math.max(0.5, stroke.size * p);
@@ -48,26 +54,73 @@ export function renderStrokes(ctx: CanvasRenderingContext2D, strokes: readonly S
   for (const stroke of strokes) renderStroke(ctx, stroke);
 }
 
-export function renderProject(
-  ctx: CanvasRenderingContext2D,
-  scratch: CanvasRenderingContext2D,
+function renderFrame(
+  target: CanvasRenderingContext2D,
+  layerScratch: CanvasRenderingContext2D,
   project: Project,
   frameIndex: number,
 ): void {
   const { width, height } = project;
-  ctx.clearRect(0, 0, width, height);
+  target.clearRect(0, 0, width, height);
 
   for (const layer of project.layers) {
     if (!layer.visible) continue;
     const frame = layer.frames[frameIndex];
     if (!frame || frame.strokes.length === 0) continue;
 
-    scratch.clearRect(0, 0, width, height);
-    renderStrokes(scratch, frame.strokes);
+    layerScratch.clearRect(0, 0, width, height);
+    renderStrokes(layerScratch, frame.strokes);
 
-    ctx.save();
-    ctx.globalAlpha = layer.opacity;
-    ctx.drawImage(scratch.canvas, 0, 0);
-    ctx.restore();
+    target.save();
+    target.globalAlpha = layer.opacity;
+    target.drawImage(layerScratch.canvas, 0, 0);
+    target.restore();
   }
+}
+
+function drawOnionFrame(
+  target: CanvasRenderingContext2D,
+  layerScratch: CanvasRenderingContext2D,
+  onionScratch: CanvasRenderingContext2D,
+  project: Project,
+  frameIndex: number,
+  tint: string,
+  distance: number,
+): void {
+  if (frameIndex < 0 || frameIndex >= project.layers[0].frames.length) return;
+
+  renderFrame(onionScratch, layerScratch, project, frameIndex);
+
+  onionScratch.save();
+  onionScratch.globalCompositeOperation = 'source-atop';
+  onionScratch.fillStyle = tint;
+  onionScratch.fillRect(0, 0, project.width, project.height);
+  onionScratch.restore();
+
+  target.save();
+  target.globalAlpha = Math.min(0.4, 0.4 / distance);
+  target.drawImage(onionScratch.canvas, 0, 0);
+  target.restore();
+}
+
+export function renderProject(
+  target: CanvasRenderingContext2D,
+  layerScratch: CanvasRenderingContext2D,
+  onionScratch: CanvasRenderingContext2D,
+  project: Project,
+  frameIndex: number,
+  onion: OnionSkin,
+): void {
+  target.clearRect(0, 0, project.width, project.height);
+
+  if (onion.enabled) {
+    for (let d = onion.before; d >= 1; d--) {
+      drawOnionFrame(target, layerScratch, onionScratch, project, frameIndex - d, '#ff5b5b', d);
+    }
+    for (let d = onion.after; d >= 1; d--) {
+      drawOnionFrame(target, layerScratch, onionScratch, project, frameIndex + d, '#5b8cff', d);
+    }
+  }
+
+  renderFrame(target, layerScratch, project, frameIndex);
 }

@@ -5,6 +5,7 @@ import { DrawingCanvas } from './components/DrawingCanvas';
 import { Toolbar } from './components/Toolbar';
 import { LayerPanel } from './components/LayerPanel';
 import { Timeline } from './components/Timeline';
+import { PlaybackBar } from './components/PlaybackBar';
 import { useProject } from './hooks/useProject';
 import { useToolStore } from './state/toolStore';
 import { useUiStore } from './state/uiStore';
@@ -78,6 +79,7 @@ export function App() {
           <DrawingCanvas engine={engine} />
         </main>
       </div>
+      <PlaybackBar engine={engine} />
       <Timeline engine={engine} />
     </div>
   );

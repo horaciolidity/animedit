@@ -32,6 +32,10 @@ export function createProject(width = 1280, height = 720, fps = 12): Project {
   };
 }
 
+export function setFps(project: Project, fps: number): Project {
+  return { ...project, fps: Math.max(1, Math.floor(fps)) };
+}
+
 export function updateLayer(
   project: Project,
   layerId: string,
