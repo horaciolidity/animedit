@@ -104,6 +104,22 @@ export class EditorEngine {
     this.commit('parent', project.setParent(this.state, layerId, parentId));
   }
 
+  setCameraTransform(frame: number, transform: Transform): void {
+    this.commit('camera-transform', project.setCameraTransformAtFrame(this.state, frame, transform));
+  }
+
+  addCameraKeyframe(frame: number): void {
+    this.commit('camera-keyframe', project.addCameraKeyframeAt(this.state, frame));
+  }
+
+  removeCameraKeyframe(frame: number): void {
+    this.commit('camera-remove-keyframe', project.removeCameraKeyframeAt(this.state, frame));
+  }
+
+  setCameraKeyframeEasing(frame: number, easing: EasingKind): void {
+    this.commit('camera-easing', project.setCameraKeyframeEasing(this.state, frame, easing));
+  }
+
   setTransformValue(layerId: string, frame: number, transform: Transform): void {
     this.commit('transform', project.setTransformAtFrame(this.state, layerId, frame, transform));
   }

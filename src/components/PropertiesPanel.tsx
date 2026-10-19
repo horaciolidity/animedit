@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { EditorEngine } from '../core/editor';
 import { transformAt } from '../core/transform';
+import { cameraAt } from '../core/project';
 import { useProject } from '../hooks/useProject';
 import { useUiStore } from '../state/uiStore';
 import type { EasingKind, Transform } from '../model/types';
@@ -61,11 +62,104 @@ export function PropertiesPanel({ engine }: { engine: EditorEngine }) {
 
   const layer = project.layers.find((candidate) => candidate.id === activeLayerId) ?? null;
 
+  const cameraTransform = cameraAt(project.camera, currentFrame);
+  const cameraAnimated = project.camera.keyframes.length > 0;
+  const cameraKeyHere = project.camera.keyframes.find((key) => key.frame === currentFrame) ?? null;
+
+  const updateCamera = (patch: Partial<Transform>) => {
+    engine.setCameraTransform(currentFrame, { ...cameraTransform, ...patch });
+  };
+
   if (!layer) {
     return (
       <aside className="properties">
         <div className="panel-header">
           <span>Propiedades</span>
+        </div>
+        <div className="properties-body">
+          <div className="prop-section">
+            <div className="prop-title">Cámara</div>
+            <NumberField label="X" value={cameraTransform.x} onCommit={(x) => updateCamera({ x })} />
+            <NumberField label="Y" value={cameraTransform.y} onCommit={(y) => updateCamera({ y })} />
+            <NumberField
+              label="Rot°"
+              value={cameraTransform.rotation}
+              onCommit={(rotation) => updateCamera({ rotation })}
+            />
+            <NumberField
+              label="EscX"
+              value={cameraTransform.scaleX}
+              step={0.05}
+              onCommit={(scaleX) => updateCamera({ scaleX })}
+            />
+            <NumberField
+              label="EscY"
+              value={cameraTransform.scaleY}
+              step={0.05}
+              onCommit={(scaleY) => updateCamera({ scaleY })}
+            />
+          </div>
+          <div className="prop-section">
+            <div className="prop-title">Fotogramas clave (cámara)</div>
+            <div className="group">
+              <button
+                className="tool small"
+                onClick={() => engine.addCameraKeyframe(currentFrame)}
+              >
+                Agregar clave
+              </button>
+              <button
+                className="tool small"
+                onClick={() => engine.removeCameraKeyframe(currentFrame)}
+                disabled={!cameraKeyHere}
+              >
+                Borrar clave
+              </button>
+            </div>
+            <label className="field prop-field">
+              Interpolación
+              <select
+                value={cameraKeyHere?.easing ?? 'linear'}
+                disabled={!cameraKeyHere}
+                onChange={(e) =>
+                  engine.setCameraKeyframeEasing(currentFrame, e.target.value as EasingKind)
+                }
+              >
+                {EASINGS.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="prop-hint">
+              {cameraAnimated
+                ? `${project.camera.keyframes.length} clave(s). Editar crea clave en el fotograma actual.`
+                : 'Sin animación: editar mueve la cámara entera.'}
+            </div>
+          </div>
+          <div className="prop-section">
+            <div className="prop-title">Cámara</div>
+            <NumberField label="X" value={cameraTransform.x} onCommit={(x) => updateCamera({ x })} />
+            <NumberField label="Y" value={cameraTransform.y} onCommit={(y) => updateCamera({ y })} />
+            <NumberField
+              label="Rot°"
+              value={cameraTransform.rotation}
+              onCommit={(rotation) => updateCamera({ rotation })}
+            />
+            <NumberField
+              label="EscX"
+              value={cameraTransform.scaleX}
+              step={0.05}
+              onCommit={(scaleX) => updateCamera({ scaleX })}
+            />
+            <NumberField
+              label="EscY"
+              value={cameraTransform.scaleY}
+              step={0.05}
+              onCommit={(scaleY) => updateCamera({ scaleY })}
+            />
+          </div>
         </div>
       </aside>
     );
@@ -163,6 +257,29 @@ export function PropertiesPanel({ engine }: { engine: EditorEngine }) {
               ? `${layer.keyframes.length} clave(s). Editar crea clave en el fotograma actual.`
               : 'Sin animación: editar mueve la capa entera.'}
           </div>
+        </div>
+
+        <div className="prop-section">
+          <div className="prop-title">Cámara</div>
+          <NumberField label="X" value={cameraTransform.x} onCommit={(x) => updateCamera({ x })} />
+          <NumberField label="Y" value={cameraTransform.y} onCommit={(y) => updateCamera({ y })} />
+          <NumberField
+            label="Rot°"
+            value={cameraTransform.rotation}
+            onCommit={(rotation) => updateCamera({ rotation })}
+          />
+          <NumberField
+            label="EscX"
+            value={cameraTransform.scaleX}
+            step={0.05}
+            onCommit={(scaleX) => updateCamera({ scaleX })}
+          />
+          <NumberField
+            label="EscY"
+            value={cameraTransform.scaleY}
+            step={0.05}
+            onCommit={(scaleY) => updateCamera({ scaleY })}
+          />
         </div>
       </div>
     </aside>

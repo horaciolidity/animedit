@@ -1,4 +1,4 @@
-import type { EasingKind, Frame, Keyframe, Layer, Project, Stroke, Transform } from '../model/types';
+import type { Camera, EasingKind, Frame, Keyframe, Layer, Project, Stroke, Transform } from '../model/types';
 import { IDENTITY } from './transform';
 import { createProject } from './project';
 
@@ -90,6 +90,14 @@ function normalizeTransform(raw: unknown): Transform {
   };
 }
 
+function normalizeCamera(raw: unknown): Camera {
+  const record = asRecord(raw) ?? {};
+  return {
+    transform: normalizeTransform(record.transform),
+    keyframes: normalizeKeyframes(record.keyframes),
+  };
+}
+
 function normalizeKeyframes(raw: unknown): Keyframe[] {
   if (!Array.isArray(raw)) return [];
   const result: Keyframe[] = [];
@@ -140,6 +148,7 @@ export function normalizeProject(raw: unknown): Project | null {
     width: Math.max(1, Math.floor(num(record.width, fallback.width))),
     height: Math.max(1, Math.floor(num(record.height, fallback.height))),
     fps: Math.min(60, Math.max(1, Math.floor(num(record.fps, fallback.fps)))),
+    camera: normalizeCamera(record.camera),
     layers: layers.length > 0 ? layers : fallback.layers,
   };
 }

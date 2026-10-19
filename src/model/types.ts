@@ -59,11 +59,17 @@ export interface Layer {
   frames: Frame[];
 }
 
+export interface Camera {
+  transform: Transform;
+  keyframes: Keyframe[];
+}
+
 export interface Project {
   id: string;
   name: string;
   width: number;
   height: number;
   fps: number;
+  camera: Camera;
   layers: Layer[];
 }

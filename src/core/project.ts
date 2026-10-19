@@ -1,4 +1,5 @@
 import type {
+  Camera,
   EasingKind,
   Frame,
   Keyframe,
@@ -8,7 +9,7 @@ import type {
   Stroke,
   Transform,
 } from '../model/types';
-import { IDENTITY, transformAt } from './transform';
+import { IDENTITY, ease, lerpTransform, transformAt } from './transform';
 
 export function createId(prefix: string): string {
   return `${prefix}_${crypto.randomUUID()}`;
@@ -42,6 +43,7 @@ export function createProject(width = 1280, height = 720, fps = 12): Project {
     width,
     height,
     fps,
+    camera: { transform: { ...IDENTITY }, keyframes: [] },
     layers: [createLayer('Capa 1', 1)],
   };
 }
@@ -212,6 +214,81 @@ export function setKeyframeEasing(
     ...layer,
     keyframes: layer.keyframes.map((key) => (key.frame === frame ? { ...key, easing } : key)),
   }));
+}
+
+function interpolateKeys(keys: Keyframe[], frameIndex: number): Transform | null {
+  if (keys.length === 0) return null;
+  if (frameIndex <= keys[0].frame) return keys[0].transform;
+  const last = keys[keys.length - 1];
+  if (frameIndex >= last.frame) return last.transform;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const a = keys[i];
+    const b = keys[i + 1];
+    if (frameIndex >= a.frame && frameIndex <= b.frame) {
+      const span = b.frame - a.frame || 1;
+      const t = ease(a.easing, (frameIndex - a.frame) / span);
+      return lerpTransform(a.transform, b.transform, t);
+    }
+  }
+  return null;
+}
+
+export function cameraAt(camera: Camera, frame: number): Transform {
+  return interpolateKeys(camera.keyframes, frame) ?? camera.transform;
+}
+
+export function setCameraTransformAtFrame(project: Project, frame: number, transform: Transform): Project {
+  return {
+    ...project,
+    camera: {
+      ...project.camera,
+      keyframes: setCameraKeyframeList(project.camera.keyframes, frame, transform),
+    },
+  };
+}
+
+function setCameraKeyframeList(keys: Keyframe[], frame: number, transform: Transform): Keyframe[] {
+  const exists = keys.some((key) => key.frame === frame);
+  const updated = exists
+    ? keys.map((key) => (key.frame === frame ? { ...key, transform } : key))
+    : sortKeyframes([...keys, { frame, transform, easing: 'linear' }]);
+  return updated;
+}
+
+export function addCameraKeyframeAt(project: Project, frame: number): Project {
+  return {
+    ...project,
+    camera: {
+      ...project.camera,
+      keyframes: addKeyframeList(project.camera.keyframes, project.camera, frame),
+    },
+  };
+}
+
+function addKeyframeList(keys: Keyframe[], camera: Camera, frame: number): Keyframe[] {
+  if (keys.some((key) => key.frame === frame)) return keys;
+  const transform = cameraAt(camera, frame);
+  return sortKeyframes([...keys, { frame, transform, easing: 'linear' }]);
+}
+
+export function removeCameraKeyframeAt(project: Project, frame: number): Project {
+  return {
+    ...project,
+    camera: {
+      ...project.camera,
+      keyframes: project.camera.keyframes.filter((key) => key.frame !== frame),
+    },
+  };
+}
+
+export function setCameraKeyframeEasing(project: Project, frame: number, easing: EasingKind): Project {
+  return {
+    ...project,
+    camera: {
+      ...project.camera,
+      keyframes: project.camera.keyframes.map((key) => (key.frame === frame ? { ...key, easing } : key)),
+    },
+  };
 }
 
 export function appendFrame(project: Project): Project {

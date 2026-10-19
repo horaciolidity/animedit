@@ -1,6 +1,6 @@
 import type { Project, Stroke } from '../model/types';
-import { worldMatrix } from '../core/transform';
-import { resolveFrameIndex } from '../core/project';
+import { worldMatrix, localMatrix } from '../core/transform';
+import { resolveFrameIndex, cameraAt } from '../core/project';
 import { getImage } from './imageCache';
 
 export interface OnionSkin {
@@ -64,6 +64,13 @@ function renderFrame(
   frameIndex: number,
 ): void {
   const { width, height } = project;
+  const pivotX = width / 2;
+  const pivotY = height / 2;
+
+  const camTransform = cameraAt(project.camera, frameIndex);
+  const camMatrix = localMatrix(camTransform, pivotX, pivotY);
+  const invCam = camMatrix.inverse();
+
   target.setTransform(1, 0, 0, 1, 0, 0);
   target.clearRect(0, 0, width, height);
 
@@ -100,7 +107,7 @@ function renderFrame(
 
     target.save();
     target.globalAlpha = layer.opacity;
-    target.setTransform(worldMatrix(project, layer, frameIndex));
+    target.setTransform(invCam.multiply(worldMatrix(project, layer, frameIndex)));
     target.drawImage(layerScratch.canvas, 0, 0);
     target.restore();
   }
