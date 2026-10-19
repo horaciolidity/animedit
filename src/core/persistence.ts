@@ -149,6 +149,9 @@ export function normalizeProject(raw: unknown): Project | null {
     height: Math.max(1, Math.floor(num(record.height, fallback.height))),
     fps: Math.min(60, Math.max(1, Math.floor(num(record.fps, fallback.fps)))),
     camera: normalizeCamera(record.camera),
+    palette: Array.isArray(record.palette)
+      ? (record.palette as unknown[]).filter((c): c is string => typeof c === 'string')
+      : fallback.palette,
     layers: layers.length > 0 ? layers : fallback.layers,
   };
 }

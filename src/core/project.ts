@@ -44,6 +44,7 @@ export function createProject(width = 1280, height = 720, fps = 12): Project {
     height,
     fps,
     camera: { transform: { ...IDENTITY }, keyframes: [] },
+    palette: ['#1e1e1e', '#ff5b5b', '#5b8cff', '#ffcf4d', '#7fe08a', '#e25bff'],
     layers: [createLayer('Capa 1', 1)],
   };
 }
@@ -288,6 +289,18 @@ export function setCameraKeyframeEasing(project: Project, frame: number, easing:
       ...project.camera,
       keyframes: project.camera.keyframes.map((key) => (key.frame === frame ? { ...key, easing } : key)),
     },
+  };
+}
+
+export function addPaletteColor(project: Project, color: string): Project {
+  if (project.palette.includes(color)) return project;
+  return { ...project, palette: [...project.palette, color] };
+}
+
+export function removePaletteColor(project: Project, index: number): Project {
+  return {
+    ...project,
+    palette: project.palette.filter((_, i) => i !== index),
   };
 }
 

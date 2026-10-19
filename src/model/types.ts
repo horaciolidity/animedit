@@ -71,5 +71,6 @@ export interface Project {
   height: number;
   fps: number;
   camera: Camera;
+  palette: string[];
   layers: Layer[];
 }

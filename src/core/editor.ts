@@ -120,6 +120,14 @@ export class EditorEngine {
     this.commit('camera-easing', project.setCameraKeyframeEasing(this.state, frame, easing));
   }
 
+  addPaletteColor(color: string): void {
+    this.commit('palette-add', project.addPaletteColor(this.state, color));
+  }
+
+  removePaletteColor(index: number): void {
+    this.commit('palette-remove', project.removePaletteColor(this.state, index));
+  }
+
   setTransformValue(layerId: string, frame: number, transform: Transform): void {
     this.commit('transform', project.setTransformAtFrame(this.state, layerId, frame, transform));
   }

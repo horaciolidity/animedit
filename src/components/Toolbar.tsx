@@ -1,8 +1,11 @@
 import { useToolStore } from '../state/toolStore';
 import { useUiStore } from '../state/uiStore';
+import { useProject } from '../hooks/useProject';
+import type { EditorEngine } from '../core/editor';
 import type { EditorTool } from '../model/types';
 
 interface ToolbarProps {
+  engine: EditorEngine;
   onUndo: () => void;
   onRedo: () => void;
   canUndo: boolean;
@@ -20,7 +23,9 @@ const TOOLS: { kind: EditorTool; label: string; hint: string }[] = [
 
 const SHAPE_TOOLS: EditorTool[] = ['brush', 'eraser', 'line', 'rect', 'ellipse'];
 
-export function Toolbar({ onUndo, onRedo, canUndo, canRedo }: ToolbarProps) {
+const PALETTE_DEFAULT = ['#1e1e1e', '#ff5b5b', '#5b8cff', '#ffcf4d', '#7fe08a', '#e25bff'];
+
+export function Toolbar({ engine, onUndo, onRedo, canUndo, canRedo }: ToolbarProps) {
   const tool = useToolStore((s) => s.tool);
   const color = useToolStore((s) => s.color);
   const size = useToolStore((s) => s.size);
@@ -30,6 +35,9 @@ export function Toolbar({ onUndo, onRedo, canUndo, canRedo }: ToolbarProps) {
   const zoom = useUiStore((s) => s.zoom);
   const resetView = useUiStore((s) => s.resetView);
   const zoomAt = useUiStore((s) => s.zoomAt);
+
+  const project = useProject(engine);
+  const palette = project.palette ?? PALETTE_DEFAULT;
 
   const showStyling = SHAPE_TOOLS.includes(tool);
 
@@ -69,6 +77,30 @@ export function Toolbar({ onUndo, onRedo, canUndo, canRedo }: ToolbarProps) {
               />
               <span className="size-value">{size}</span>
             </label>
+          </div>
+
+          <div className="group palette-group">
+            <span className="palette-label">Paleta</span>
+            {palette.map((c, i) => (
+              <button
+                key={i}
+                className={`palette-swatch ${color === c ? 'active' : ''}`}
+                style={{ backgroundColor: c }}
+                onClick={() => setColor(c)}
+                onMouseDown={(e) => e.preventDefault()}
+                title={c}
+              />
+            ))}
+            <button
+              className="palette-swatch palette-add"
+              onClick={() => {
+                setColor(color);
+                void engine.addPaletteColor(color);
+              }}
+              title="Agregar color a la paleta"
+            >
+              +
+            </button>
           </div>
         </>
       ) : null}

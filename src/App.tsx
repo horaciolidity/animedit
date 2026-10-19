@@ -129,7 +129,7 @@ export function App() {
 
   return (
     <div className="app">
-      <Toolbar onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} />
+      <Toolbar engine={engine} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} />
       <ProjectBar engine={engine} />
       <div className="main">
         <LayerPanel engine={engine} />
