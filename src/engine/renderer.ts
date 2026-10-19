@@ -1,5 +1,6 @@
 import type { Project, Stroke } from '../model/types';
 import { worldMatrix } from '../core/transform';
+import { resolveFrameIndex } from '../core/project';
 import { getImage } from './imageCache';
 
 export interface OnionSkin {
@@ -68,7 +69,8 @@ function renderFrame(
 
   for (const layer of project.layers) {
     if (!layer.visible) continue;
-    const frame = layer.frames[frameIndex];
+    const sourceIndex = resolveFrameIndex(layer, frameIndex);
+    const frame = layer.frames[sourceIndex];
     const hasStrokes = !!frame && frame.strokes.length > 0;
     const hasImages = !!frame && frame.images.length > 0;
     if (!hasStrokes && !hasImages) continue;

@@ -15,7 +15,7 @@ export function createId(prefix: string): string {
 }
 
 export function createFrame(): Frame {
-  return { strokes: [], images: [] };
+  return { strokes: [], images: [], exposure: 1 };
 }
 
 export function createLayer(name: string, frameCount: number): Layer {
@@ -61,18 +61,31 @@ export function updateLayer(
   };
 }
 
+export function resolveFrameIndex(layer: Layer, frameIndex: number): number {
+  const frames = layer.frames;
+  for (let i = frameIndex; i >= 0; i--) {
+    const f = frames[i];
+    const exp = Math.max(1, f.exposure);
+    if (i + exp > frameIndex) return i;
+  }
+  return frameIndex;
+}
+
 export function addStroke(
   project: Project,
   layerId: string,
   frameIndex: number,
   stroke: Stroke,
 ): Project {
-  return updateLayer(project, layerId, (layer) => ({
-    ...layer,
-    frames: layer.frames.map((frame, index) =>
-      index === frameIndex ? { ...frame, strokes: [...frame.strokes, stroke] } : frame,
-    ),
-  }));
+  return updateLayer(project, layerId, (layer) => {
+    const sourceIndex = resolveFrameIndex(layer, frameIndex);
+    return {
+      ...layer,
+      frames: layer.frames.map((frame, index) =>
+        index === sourceIndex ? { ...frame, strokes: [...frame.strokes, stroke] } : frame,
+      ),
+    };
+  });
 }
 
 export function addImage(
@@ -94,12 +107,28 @@ export function addLayer(project: Project): Project {
 }
 
 export function clearFrame(project: Project, layerId: string, frameIndex: number): Project {
-  return updateLayer(project, layerId, (layer) => ({
-    ...layer,
-    frames: layer.frames.map((frame, index) =>
-      index === frameIndex ? { strokes: [], images: [] } : frame,
-    ),
-  }));
+  return updateLayer(project, layerId, (layer) => {
+    const sourceIndex = resolveFrameIndex(layer, frameIndex);
+
+    if (sourceIndex !== frameIndex) {
+      const newPrevExp = Math.max(1, frameIndex - sourceIndex);
+      return {
+        ...layer,
+        frames: layer.frames.map((f, i) => {
+          if (i === sourceIndex) return { ...f, exposure: newPrevExp };
+          if (i === frameIndex) return createFrame();
+          return f;
+        }),
+      };
+    }
+
+    return {
+      ...layer,
+      frames: layer.frames.map((frame, index) =>
+        index === frameIndex ? { ...frame, strokes: [], images: [] } : frame,
+      ),
+    };
+  });
 }
 
 export function removeLayer(project: Project, layerId: string): Project {
@@ -199,7 +228,7 @@ export function insertFrameAfter(project: Project, index: number, copyLayerId?: 
       const frames = [...layer.frames];
       const source = frames[index];
       const copy = layer.id === copyLayerId && source ? source.strokes.map((s) => ({ ...s })) : [];
-      frames.splice(index + 1, 0, { strokes: copy, images: [] });
+      frames.splice(index + 1, 0, { strokes: copy, images: [], exposure: 1 });
       return { ...layer, frames };
     }),
   };

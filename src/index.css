@@ -361,6 +361,15 @@ button {
   display: none;
 }
 
+.tl-cell.held {
+  background: #24242b;
+  opacity: 0.65;
+}
+
+.tl-cell.held.current {
+  opacity: 1;
+}
+
 .properties {
   width: 250px;
   flex: 0 0 250px;

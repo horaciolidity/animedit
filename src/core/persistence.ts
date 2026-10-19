@@ -111,22 +111,22 @@ function normalizeFrame(raw: unknown): Frame {
   const record = asRecord(raw) ?? {};
   const strokes = Array.isArray(record.strokes) ? (record.strokes as Stroke[]) : [];
   const images = Array.isArray(record.images) ? (record.images as Frame['images']) : [];
-  return { strokes, images };
+  return { strokes, images, exposure: Math.max(1, Math.floor(num(record.exposure, 1))) };
 }
 
 function normalizeLayer(raw: unknown, index: number): Layer {
   const record = asRecord(raw) ?? {};
   const frames = Array.isArray(record.frames) ? record.frames.map(normalizeFrame) : [];
-  return {
-    id: typeof record.id === 'string' ? record.id : crypto.randomUUID(),
-    name: typeof record.name === 'string' ? record.name : `Capa ${index + 1}`,
-    visible: record.visible !== false,
-    opacity: Math.min(1, Math.max(0, num(record.opacity, 1))),
-    parentId: typeof record.parentId === 'string' ? record.parentId : null,
-    transform: normalizeTransform(record.transform),
-    keyframes: normalizeKeyframes(record.keyframes),
-    frames: frames.length > 0 ? frames : [{ strokes: [], images: [] }],
-  };
+    return {
+      id: typeof record.id === 'string' ? record.id : crypto.randomUUID(),
+      name: typeof record.name === 'string' ? record.name : `Capa ${index + 1}`,
+      visible: record.visible !== false,
+      opacity: Math.min(1, Math.max(0, num(record.opacity, 1))),
+      parentId: typeof record.parentId === 'string' ? record.parentId : null,
+      transform: normalizeTransform(record.transform),
+      keyframes: normalizeKeyframes(record.keyframes),
+      frames: frames.length > 0 ? frames : [{ strokes: [], images: [], exposure: 1 }],
+    };
 }
 
 export function normalizeProject(raw: unknown): Project | null {

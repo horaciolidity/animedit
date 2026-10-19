@@ -21,6 +21,7 @@ export interface Stroke {
 export interface Frame {
   strokes: Stroke[];
   images: PlacedImage[];
+  exposure: number;
 }
 
 export interface PlacedImage {
