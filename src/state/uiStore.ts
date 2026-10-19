@@ -10,6 +10,8 @@ interface UiState {
   zoom: number;
   panX: number;
   panY: number;
+  playbackStart: number;
+  playbackEnd: number;
   setActiveLayer: (id: string) => void;
   setCurrentFrame: (frame: number) => void;
   setPlaying: (playing: boolean) => void;
@@ -19,6 +21,8 @@ interface UiState {
   setPan: (x: number, y: number) => void;
   zoomAt: (factor: number, cx: number, cy: number, width: number, height: number) => void;
   resetView: () => void;
+  setPlaybackStart: (v: number) => void;
+  setPlaybackEnd: (v: number) => void;
 }
 
 function clampCount(count: number): number {
@@ -41,6 +45,8 @@ export const useUiStore = create<UiState>((set) => ({
   zoom: 1,
   panX: 0,
   panY: 0,
+  playbackStart: 0,
+  playbackEnd: 0,
   setActiveLayer: (activeLayerId) => set({ activeLayerId }),
   setCurrentFrame: (currentFrame) => set({ currentFrame: Math.max(0, Math.floor(currentFrame)) }),
   setPlaying: (isPlaying) => set({ isPlaying }),
@@ -61,4 +67,6 @@ export const useUiStore = create<UiState>((set) => ({
       };
     }),
   resetView: () => set({ zoom: 1, panX: 0, panY: 0 }),
+  setPlaybackStart: (v) => set({ playbackStart: Math.max(0, Math.floor(v)) }),
+  setPlaybackEnd: (v) => set({ playbackEnd: Math.max(0, Math.floor(v)) }),
 }));

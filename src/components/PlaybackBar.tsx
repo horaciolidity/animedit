@@ -18,6 +18,11 @@ export function PlaybackBar({ engine }: { engine: EditorEngine }) {
   const setOnionAfter = useUiStore((s) => s.setOnionAfter);
 
   const fps = project.fps;
+  const frameCount = getFrameCount(project);
+  const playbackStart = useUiStore((s) => s.playbackStart);
+  const playbackEnd = useUiStore((s) => s.playbackEnd);
+  const setPlaybackStart = useUiStore((s) => s.setPlaybackStart);
+  const setPlaybackEnd = useUiStore((s) => s.setPlaybackEnd);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -25,7 +30,10 @@ export function PlaybackBar({ engine }: { engine: EditorEngine }) {
       const count = getFrameCount(engine.getProject());
       if (count <= 1) return;
       const current = useUiStore.getState().currentFrame;
-      useUiStore.getState().setCurrentFrame((current + 1) % count);
+      const start = Math.min(playbackStart, count - 1);
+      const end = Math.max(start, Math.min(playbackEnd, count - 1));
+      const next = current + 1;
+      useUiStore.getState().setCurrentFrame(next > end ? start : next);
     }, 1000 / fps);
     return () => window.clearInterval(id);
   }, [isPlaying, fps, engine]);
@@ -54,6 +62,28 @@ export function PlaybackBar({ engine }: { engine: EditorEngine }) {
           onChange={(e) => setOnionEnabled(e.target.checked)}
         />
         Papel cebolla
+      </label>
+
+      <label className="field">
+        Desde
+        <input
+          type="number"
+          min={0}
+          max={frameCount - 1}
+          value={playbackStart}
+          onChange={(e) => setPlaybackStart(Number(e.target.value))}
+        />
+      </label>
+
+      <label className="field">
+        Hasta
+        <input
+          type="number"
+          min={0}
+          max={frameCount - 1}
+          value={playbackEnd}
+          onChange={(e) => setPlaybackEnd(Number(e.target.value))}
+        />
       </label>
 
       <label className="field">
