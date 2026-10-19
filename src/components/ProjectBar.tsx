@@ -4,6 +4,7 @@ import { createProject } from '../core/project';
 import { projectFromJson, projectToJson, saveProject } from '../core/persistence';
 import { useUiStore } from '../state/uiStore';
 import type { PlacedImage } from '../model/types';
+import { HelpPanel } from './HelpPanel';
 
 function downloadText(filename: string, text: string): void {
   const blob = new Blob([text], { type: 'application/json' });
@@ -38,6 +39,7 @@ export function ProjectBar({ engine }: { engine: EditorEngine }) {
   const imageInput = useRef<HTMLInputElement>(null);
   const statusTimer = useRef<number | undefined>(undefined);
   const [status, setStatus] = useState('');
+  const [showHelp, setShowHelp] = useState(false);
 
   const flash = (message: string) => {
     setStatus(message);
@@ -126,6 +128,9 @@ export function ProjectBar({ engine }: { engine: EditorEngine }) {
       <button className="tool small" onClick={() => imageInput.current?.click()}>
         Importar imagen
       </button>
+      <button className="tool small" onClick={() => setShowHelp(true)} title="Ayuda / Tutorial">
+        Ayuda
+      </button>
       {status ? <span className="project-status">{status}</span> : null}
       <input
         ref={fileInput}
@@ -149,6 +154,7 @@ export function ProjectBar({ engine }: { engine: EditorEngine }) {
           e.target.value = '';
         }}
       />
+      {showHelp ? <HelpPanel onClose={() => setShowHelp(false)} /> : null}
     </div>
   );
 }

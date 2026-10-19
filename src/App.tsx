@@ -9,6 +9,7 @@ import { Timeline } from './components/Timeline';
 import { PlaybackBar } from './components/PlaybackBar';
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { ProjectBar } from './components/ProjectBar';
+import { HelpPanel } from './components/HelpPanel';
 import { useProject } from './hooks/useProject';
 import { useToolStore } from './state/toolStore';
 import { useUiStore } from './state/uiStore';
@@ -19,6 +20,7 @@ export function App() {
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [ready, setReady] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,6 +52,13 @@ export function App() {
       window.clearTimeout(timer);
     };
   }, [engine, ready]);
+
+  useEffect(() => {
+    if (ready && !localStorage.getItem('anim2d:seenHelp')) {
+      localStorage.setItem('anim2d:seenHelp', '1');
+      setShowHelp(true);
+    }
+  }, [ready]);
 
   useEffect(() => {
     const sync = () => {
@@ -140,6 +149,7 @@ export function App() {
       </div>
       <PlaybackBar engine={engine} />
       <Timeline engine={engine} />
+      {showHelp ? <HelpPanel onClose={() => setShowHelp(false)} /> : null}
     </div>
   );
 }
